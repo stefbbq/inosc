@@ -11,6 +11,7 @@ export const formatTasks = (tasks: TaskStatus[]): string => {
           r.mode === 'read' ? 'read-only' : '',
           r.dirty.length > 0 ? `${r.dirty.length} uncommitted` : '',
           r.unpushed > 0 ? `${r.unpushed} unpushed` : '',
+          r.ignored.length > 0 ? `local-only: ${r.ignored.join(', ')}` : '',
         ].filter(Boolean)
         return `  ${r.name.padEnd(20)} ${where}${flags.length > 0 ? `  (${flags.join(', ')})` : ''}`
       })

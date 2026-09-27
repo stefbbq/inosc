@@ -137,13 +137,15 @@ describe('inosc done', () => {
     }
   })
 
-  it('ignores ignoreDirty paths', () => {
+  it('reports ignoreDirty paths separately and removes despite them', () => {
     const { ws, ctx, wsRoot } = makeWorkspace({
       repos: { app: { clone: 'app', ignoreDirty: ['lock.txt'] }, lib: { clone: 'lib' }, db: { clone: 'db' } },
       links: [],
     })
     newTask(ctx, ws, { id: 'T-1', edit: ['app'], read: [], slug: null })
     writeFileSync(join(wsRoot, 'tasks', 'T-1', 'app', 'lock.txt'), 'x\n')
+    const listed = listTasks(ws)
+    expect(listed.ok && listed.value[0]?.repos[0]).toMatchObject({ dirty: [], ignored: ['lock.txt'] })
     const res = doneTask(ctx, ws, { id: 'T-1', force: false })
     expect(res.ok ? '' : res.error).toBe('')
   })

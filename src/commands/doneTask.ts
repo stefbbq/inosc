@@ -26,7 +26,7 @@ export const doneTask = (ctx: Context, ws: Workspace, opts: DoneTaskOptions): Re
 
   if (!opts.force) {
     const problems = repos.flatMap((r) =>
-      removalProblems(inspectRepo(dir, r.name, r.mode), ws.config.repos[r.name]?.ignoreDirty ?? []),
+      removalProblems(inspectRepo(dir, r.name, r.mode, ws.config.repos[r.name]?.ignoreDirty)),
     )
     const extra = unexpectedEntries(dir, repos.map((r) => r.name))
     if (extra.length > 0) problems.push(`task folder has files inosc didn't create: ${extra.join(', ')}`)

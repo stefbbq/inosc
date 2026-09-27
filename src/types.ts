@@ -84,8 +84,10 @@ export type RepoStatus = {
   exists: boolean
   /** Checked-out branch, or null when detached. */
   head: string | null
-  /** Paths with uncommitted changes, as reported by `git status --porcelain`. */
+  /** Paths with uncommitted changes, as reported by `git status --porcelain`, minus `ignored`. */
   dirty: string[]
+  /** Uncommitted paths listed in the repo's `ignoreDirty`. */
+  ignored: string[]
   /** Commits on HEAD not found on any remote. */
   unpushed: number
 }

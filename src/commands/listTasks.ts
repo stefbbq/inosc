@@ -13,7 +13,7 @@ export const listTasks = (ws: Workspace, id?: string): Result<TaskStatus[]> => {
     const dir = taskDir(ws, taskId)
     const manifest = readManifest(dir)
     if (!manifest.ok) return manifest
-    tasks.push({ id: taskId, path: dir, repos: manifest.value.repos.map((r) => inspectRepo(dir, r.name, r.mode)) })
+    tasks.push({ id: taskId, path: dir, repos: manifest.value.repos.map((r) => inspectRepo(dir, r.name, r.mode, ws.config.repos[r.name]?.ignoreDirty)) })
   }
   return ok(tasks)
 }

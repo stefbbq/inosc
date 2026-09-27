@@ -58,15 +58,13 @@ describe('activeLinks', () => {
 })
 
 describe('removalProblems', () => {
-  const base = { name: 'a', mode: 'edit' as const, path: '/x', exists: true, head: 'a', dirty: [], unpushed: 0 }
+  const base = { name: 'a', mode: 'edit' as const, path: '/x', exists: true, head: 'a', dirty: [], ignored: [], unpushed: 0 }
   it('is empty for a clean pushed worktree', () => {
-    expect(removalProblems(base, [])).toEqual([])
+    expect(removalProblems(base)).toEqual([])
   })
-  it('reports dirty and unpushed, honouring ignoreDirty', () => {
-    expect(removalProblems({ ...base, dirty: ['lock.yaml'], unpushed: 2 }, ['lock.yaml'])).toEqual([
-      'a: 2 commit(s) not on any remote',
-    ])
-    expect(removalProblems({ ...base, dirty: ['x'] }, [])).toHaveLength(1)
+  it('reports dirty and unpushed but not ignored paths', () => {
+    expect(removalProblems({ ...base, ignored: ['lock.yaml'], unpushed: 2 })).toEqual(['a: 2 commit(s) not on any remote'])
+    expect(removalProblems({ ...base, dirty: ['x'] })).toHaveLength(1)
   })
 })
 
