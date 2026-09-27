@@ -1,0 +1,45 @@
+{
+  "name": "inosc",
+  "version": "0.1.0",
+  "description": "Per-task multi-repo git worktree folders, ready for Claude Code, Cursor and Codex",
+  "license": "MIT",
+  "author": "Stefan Soc",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stefbbq/inosc.git"
+  },
+  "keywords": [
+    "git",
+    "worktree",
+    "multi-repo",
+    "claude-code",
+    "cursor",
+    "codex",
+    "agents"
+  ],
+  "type": "module",
+  "bin": {
+    "inosc": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "skills",
+    "schema"
+  ],
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "dev": "node src/cli.ts",
+    "prepublishOnly": "pnpm typecheck && pnpm test && pnpm build"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0"
+  },
+  "packageManager": "pnpm@12.4.2"
+}
