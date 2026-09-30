@@ -1,4 +1,4 @@
-import type { HooksConfig, InoscConfig, LinkConfig, RepoConfig, Result } from '../types.ts'
+import type { FilesMode, HooksConfig, InoscConfig, LinkConfig, RepoConfig, Result } from '../types.ts'
 import { err } from '../result/err.ts'
 import { ok } from '../result/ok.ts'
 
@@ -23,6 +23,15 @@ const optStrArr = (o: Obj, key: string, where: string, errors: string[]): string
   return isStrArr(v) ? v : undefined
 }
 
+const filesModes: FilesMode[] = ['symlink', 'copy']
+
+const optFilesMode = (o: Obj, where: string, errors: string[]): FilesMode | undefined => {
+  const v = o.filesMode
+  if (v === undefined) return undefined
+  if (!filesModes.includes(v as FilesMode)) errors.push(`${where}.filesMode must be "symlink" or "copy"`)
+  return filesModes.includes(v as FilesMode) ? (v as FilesMode) : undefined
+}
+
 const parseRepo = (name: string, raw: unknown, errors: string[]): RepoConfig | null => {
   const where = `repos.${name}`
   if (!/^[A-Za-z0-9._-]+$/.test(name)) errors.push(`${where}: repo names may only use letters, digits, . _ -`)
@@ -30,15 +39,20 @@ const parseRepo = (name: string, raw: unknown, errors: string[]): RepoConfig | n
     errors.push(`${where} must be an object`)
     return null
   }
+  const url = optStr(raw, 'url', where, errors)
   const clone = optStr(raw, 'clone', where, errors)
-  if (clone === undefined) errors.push(`${where}.clone is required`)
+  if ((url === undefined) === (clone === undefined)) errors.push(`${where} needs exactly one of url or clone`)
+  if (raw.include !== undefined) {
+    errors.push(`${where}.include was removed: put those files in <filesDir>/${name}/ (default .inosc/files/${name}/)`)
+  }
   if (raw.commands !== undefined && !isStrRecord(raw.commands)) errors.push(`${where}.commands must map names to strings`)
   return {
-    clone: clone ?? '',
+    url,
+    clone,
     base: optStr(raw, 'base', where, errors),
     branch: optStr(raw, 'branch', where, errors),
     description: optStr(raw, 'description', where, errors),
-    include: optStrArr(raw, 'include', where, errors),
+    filesMode: optFilesMode(raw, where, errors),
     setup: optStrArr(raw, 'setup', where, errors),
     commands: isStrRecord(raw.commands) ? raw.commands : undefined,
     ignoreDirty: optStrArr(raw, 'ignoreDirty', where, errors),
@@ -93,6 +107,8 @@ export const parseConfig = (raw: unknown): Result<InoscConfig> => {
     tasksDir: optStr(raw, 'tasksDir', 'config', errors) ?? 'tasks',
     base: optStr(raw, 'base', 'config', errors) ?? 'origin/main',
     branch: optStr(raw, 'branch', 'config', errors) ?? '{id}',
+    filesDir: optStr(raw, 'filesDir', 'config', errors) ?? '.inosc/files',
+    filesMode: optFilesMode(raw, 'config', errors) ?? 'symlink',
     repos,
     links,
     hooks: parseHooks(raw.hooks, errors),

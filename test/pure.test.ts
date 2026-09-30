@@ -35,8 +35,24 @@ describe('parseConfig', () => {
     const res = parseConfig({ repos: { a: {} }, links: [{ from: 'a', to: 'x', run: 'y' }] })
     expect(res.ok).toBe(false)
     if (!res.ok) {
-      expect(res.error).toContain('repos.a.clone is required')
+      expect(res.error).toContain('repos.a needs exactly one of url or clone')
       expect(res.error).toContain('unknown repo "x"')
+    }
+  })
+  it('defaults files to a symlinked .inosc/files', () => {
+    const res = parseConfig({ repos: { a: { url: 'https://example.com/a.git' } } })
+    expect(res.ok && res.value).toMatchObject({ filesDir: '.inosc/files', filesMode: 'symlink' })
+  })
+  it('rejects both url and clone, removed include and unknown filesMode', () => {
+    const res = parseConfig({
+      filesMode: 'hardlink',
+      repos: { a: { url: 'u', clone: 'a' }, b: { url: 'u', include: ['.env'] } },
+    })
+    expect(res.ok).toBe(false)
+    if (!res.ok) {
+      expect(res.error).toContain('repos.a needs exactly one of url or clone')
+      expect(res.error).toContain('repos.b.include was removed')
+      expect(res.error).toContain('config.filesMode must be "symlink" or "copy"')
     }
   })
   it('rejects an empty repo map', () => {

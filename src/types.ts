@@ -4,18 +4,23 @@ export type Result<T, E = string> = { ok: true; value: T } | { ok: false; error:
 /** `edit` repos get a task branch; `read` repos are detached at their base. */
 export type RepoMode = 'edit' | 'read'
 
+/** How files from the workspace files dir land in a worktree. */
+export type FilesMode = 'symlink' | 'copy'
+
 /** One repo a task can include, as declared in `inosc.json`. */
 export type RepoConfig = {
-  /** Path to the main clone, relative to the workspace root, absolute, or `~/…`. */
-  clone: string
+  /** Remote URL; inosc keeps a bare mirror in `<workspace>/.inosc/repos/<name>.git`. Set this or `clone`. */
+  url?: string
+  /** Path to a clone you manage, relative to the workspace root, absolute, or `~/…`. Set this or `url`. */
+  clone?: string
   /** Ref new worktrees start from. Defaults to the workspace `base`. */
   base?: string
   /** Branch template for edit worktrees. Defaults to the workspace `branch`. */
   branch?: string
   /** One-line description shown to agents. */
   description?: string
-  /** Gitignored files or folders copied from the main clone into each worktree. */
-  include?: string[]
+  /** Overrides the workspace `filesMode` for this repo. */
+  filesMode?: FilesMode
   /** Shell commands run inside the worktree after creation. */
   setup?: string[]
   /** Named commands (build, test, lint, …) listed for agents. */
@@ -44,6 +49,9 @@ export type InoscConfig = {
   tasksDir: string
   base: string
   branch: string
+  /** Folder whose `<repo>/` subfolders are placed into every worktree of that repo. */
+  filesDir: string
+  filesMode: FilesMode
   repos: Record<string, RepoConfig>
   links: LinkConfig[]
   hooks: HooksConfig

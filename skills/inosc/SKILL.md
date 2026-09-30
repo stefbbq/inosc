@@ -13,7 +13,7 @@ inosc gives each task one folder of git worktrees, one per repo, side by side:
   <repo-a>/  <repo-b>/  …                          # worktrees
 ```
 
-The workspace is the nearest parent directory with an `inosc.json`, which lists the repos, files to copy in, setup commands and cross-repo link commands.
+The workspace is the nearest parent directory with an `inosc.json`, which lists the repos (by remote URL; inosc keeps bare mirrors in `.inosc/repos/`), setup commands and cross-repo link commands. Local-only files (`.env*`, `.npmrc`, local agent files) live in `.inosc/files/<repo>/` and are symlinked into every worktree of that repo.
 
 ## Commands
 
@@ -23,6 +23,7 @@ Run from anywhere inside the workspace.
 - `inosc repos`: repos configured in `inosc.json`.
 - `inosc new <ID> <repo>... [--read <repo>...] [--slug <slug>]`: create a task. Named repos get a task branch; `--read` repos are detached at their base for reference. Runs setup and links, which can take 5-10 minutes (package installs, builds): run it in the background or with a long timeout, never under a default 2-minute command timeout.
 - `inosc add <ID> <repo>... [--read <repo>...]`: add repos to an existing task; reruns the links they complete and regenerates AGENTS.md. Same long-running caveat as `new`.
+- `inosc sync [ID]`: place files added to `.inosc/files/` since a task was created.
 - `inosc done <ID>`: remove the task's worktrees, task branches and folder. Refuses while anything is uncommitted or unpushed.
 
 ## Rules
@@ -33,3 +34,4 @@ Run from anywhere inside the workspace.
 - After `inosc new`, read the generated `<task>/AGENTS.md` and work from the task folder. Tell the user the path, and that they can open it with `claude`, `cursor .` or `codex -C .` from there.
 - Never run `inosc done --force`. Run `inosc done` only when the user asks; if it refuses, report what it listed and let the user decide.
 - Don't edit the generated AGENTS.md, CLAUDE.md or `.vscode/settings.json` in a task; change `inosc.json` and rerun `inosc add`, or tell the user.
+- Never edit files under `.inosc/` or the symlinks inosc placed in a worktree (they're shared across tasks); tell the user what should change.

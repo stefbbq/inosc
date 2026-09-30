@@ -27,10 +27,10 @@ inosc agents install   # optional: teach Claude Code, Codex and Cursor to use in
 
 ## Quick start
 
-In a folder that holds your clones:
+In an empty folder (or one holding clones, which `init` lists by their `origin` URL):
 
 ```sh
-inosc init                              # writes inosc.json listing the clones it finds
+inosc init                              # writes inosc.json and .inosc/files/<repo>/
 inosc new PROJ-1234 app sdk --read db   # app and sdk get branch proj-1234, db is read-only
 cd tasks/PROJ-1234 && claude            # or: cursor tasks/PROJ-1234, codex -C tasks/PROJ-1234
 inosc add PROJ-1234 --read infra        # pull in another repo later
@@ -44,11 +44,12 @@ Open the **task folder** in your agent or editor, not a single repo inside it, s
 
 | Command | What it does |
 |---|---|
-| `inosc init` | Write a starter `inosc.json` listing the git clones directly below the current folder. |
-| `inosc repos` | List configured repos. |
-| `inosc new <ID> <repo>... [--read <repo>...] [--slug <s>] [--skip-setup]` | Create a task. Named repos get a task branch (reusing a local or remote one if it exists); `--read` repos are detached at their base. Copies includes, runs setup, runs links, writes agent files, runs `onNew` hooks. |
+| `inosc init` | Write a starter `inosc.json` and `.inosc/files/<repo>/`. Clones directly below the current folder are listed by `origin` URL; an empty folder gets an example. |
+| `inosc repos` | List configured repos and whether each mirror exists yet. |
+| `inosc new <ID> <repo>... [--read <repo>...] [--slug <s>] [--skip-setup]` | Create a task. Mirrors `url` repos on first use. Named repos get a task branch (reusing a local or remote one if it exists); `--read` repos are detached at their base. Places workspace files, runs setup, runs links, writes agent files, runs `onNew` hooks. |
 | `inosc add <ID> <repo>... [--read <repo>...] [--skip-setup]` | Add repos to a task; runs only the links the new repos complete and regenerates agent files. |
 | `inosc ls [ID] [--json]` | Tasks with each repo's branch, uncommitted paths and commits not on any remote. |
+| `inosc sync [ID]` | Place workspace files added since a task was created, into one task or all. |
 | `inosc path <ID>` | Print a task's folder (`cd "$(inosc path PROJ-1)"`). |
 | `inosc done <ID> [--force]` | Remove the task. Refuses if any worktree has uncommitted changes or unpushed commits, or the folder holds files inosc didn't write. `--force` discards them. |
 | `inosc agents install [--force]` | Copy the bundled `inosc` skill to `~/.claude/skills` (Claude Code) and `~/.agents/skills` (Codex, Cursor). |
@@ -67,19 +68,18 @@ All commands accept `-C <dir>` and find the workspace by walking up to the neare
   "branch": "{id}",
   "repos": {
     "app": {
-      "clone": "app",
+      "url": "https://github.com/acme/app.git",
       "description": "Web app (pnpm monorepo)",
-      "include": [".env.local", ".npmrc"],
       "setup": ["pnpm install"],
       "commands": { "test": "pnpm test", "build": "pnpm build" },
       "ignoreDirty": ["pnpm-lock.yaml"]
     },
     "sdk": {
-      "clone": "~/src/sdk",
+      "url": "git@github.com:acme/sdk.git",
       "branch": "{id}-{slug}",
       "setup": ["pnpm install", "pnpm build"]
     },
-    "db": { "clone": "db" }
+    "db": { "clone": "~/src/db" }
   },
   "links": [
     { "from": "app", "to": "sdk", "run": "pnpm link {to}/packages/core", "description": "app uses the task's sdk" }
@@ -95,8 +95,10 @@ All commands accept `-C <dir>` and find the workspace by walking up to the neare
 | `tasksDir` | Where task folders go, relative to the workspace root. |
 | `base` | Ref new worktrees start from; the remote part is fetched first. Per-repo override: `repos.<name>.base`. |
 | `branch` | Branch template: `{id}` lowercased task ID, `{ID}` as typed, `{slug}` from `--slug` (dropped with its separator when absent). Per-repo override. |
-| `repos.<name>.clone` | The main clone. Worktrees share its object store; don't edit it directly. |
-| `include` | Gitignored files copied from the main clone (env files, registry tokens, local agent files). Never overwrites. |
+| `repos.<name>.url` | Remote URL. inosc keeps a bare mirror in `.inosc/repos/<name>.git` that every worktree of the repo shares; there's no checkout to edit by mistake. |
+| `repos.<name>.clone` | Instead of `url`: a clone you manage (relative, absolute or `~/…`). Worktrees share its object store. |
+| `filesDir` | Default `.inosc/files`. Everything under `<filesDir>/<repo>/` is placed at the same path in each worktree of that repo: env files, `.npmrc`, local agent files, anything. See [Files](#files). |
+| `filesMode` | `symlink` (default) or `copy`. Per-repo override. |
 | `setup` | Shell commands run in the new worktree. |
 | `commands` | Listed in AGENTS.md so agents know how to build and test. |
 | `ignoreDirty` | Paths `done` ignores, e.g. a lockfile a link step rewrites. |
@@ -104,6 +106,26 @@ All commands accept `-C <dir>` and find the workspace by walking up to the neare
 | `hooks` | Shell commands run in the task folder. Env: `INOSC_TASK_ID`, `INOSC_TASK_DIR`, `INOSC_WORKSPACE`, `INOSC_REPOS` (also set for setup and links). |
 | `instructions` | Extra lines for every task's AGENTS.md. |
 | `settings` | Extra keys for every task's `.vscode/settings.json`. |
+
+## Files
+
+Local-only files live once per workspace, mirroring each repo's layout:
+
+```
+.inosc/
+  .gitignore              # "*": mirrors and secrets never reach the workspace's own repo
+  repos/app.git           # bare mirrors of url repos
+  files/app/.env.local    # → tasks/*/app/.env.local
+  files/app/.npmrc
+  files/app/apps/web/.dev.vars
+  files/sdk/CLAUDE.local.md
+```
+
+- **symlink** (default): one source of truth; a rotated key reaches every open task. A tool that writes the file writes the shared copy.
+- **copy**: each task gets its own snapshot.
+- inosc never overwrites: a path that already exists in the worktree is left alone with a warning.
+- Placed files git doesn't ignore are added to the mirror's `info/exclude`, so they never show as uncommitted or block `done`. For `clone` repos inosc leaves your git config alone and warns instead.
+- Add a file later, then `inosc sync` to place it in open tasks. `done` removes the links, never the sources.
 
 ## How agents see a task
 

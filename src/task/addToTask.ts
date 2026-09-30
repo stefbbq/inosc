@@ -1,9 +1,9 @@
 import type { Context, Result, TaskManifest, Workspace } from '../types.ts'
 import { writeAgentFiles } from '../agents/writeAgentFiles.ts'
+import { placeFiles } from '../files/placeFiles.ts'
 import { err } from '../result/err.ts'
 import { ok } from '../result/ok.ts'
 import { activeLinks } from './activeLinks.ts'
-import { copyIncludes } from './copyIncludes.ts'
 import { createWorktree } from './createWorktree.ts'
 import type { RepoRequest } from './planRepos.ts'
 import { runLinks } from './runLinks.ts'
@@ -12,7 +12,7 @@ import { taskEnv } from './taskEnv.ts'
 import { writeManifest } from './writeManifest.ts'
 
 /**
- * Creates worktrees for `requests`, copies includes, runs setup and the links they
+ * Creates worktrees for `requests`, places workspace files, runs setup and the links they
  * complete, and rewrites the agent files. The manifest is saved after every worktree
  * so a failure part-way leaves a task `inosc done` can clean up.
  */
@@ -37,7 +37,7 @@ export const addToTask = (
       return err(added.error)
     }
     save({ ...current, repos: [...current.repos, added.value] })
-    copyIncludes(ctx, ws, dir, req.name)
+    placeFiles(ctx, ws, dir, req.name)
   }
   if (ctx.skipSetup) return ok(current)
 

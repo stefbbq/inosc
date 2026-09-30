@@ -10,20 +10,23 @@
     "tasksDir": { "type": "string", "default": "tasks", "description": "Folder (relative to the workspace root) that holds task folders." },
     "base": { "type": "string", "default": "origin/main", "description": "Ref new worktrees start from." },
     "branch": { "type": "string", "default": "{id}", "description": "Branch template for edit worktrees: {id} lowercased task ID, {ID} raw ID, {slug} optional slug." },
+    "filesDir": { "type": "string", "default": ".inosc/files", "description": "Folder whose <repo>/ subfolders are placed into every worktree of that repo (env files, .npmrc, local agent files, anything)." },
+    "filesMode": { "enum": ["symlink", "copy"], "default": "symlink", "description": "How files from filesDir land in worktrees." },
     "repos": {
       "type": "object",
       "minProperties": 1,
       "propertyNames": { "pattern": "^[A-Za-z0-9._-]+$" },
       "additionalProperties": {
         "type": "object",
-        "required": ["clone"],
+        "oneOf": [{ "required": ["url"] }, { "required": ["clone"] }],
         "additionalProperties": false,
         "properties": {
-          "clone": { "type": "string", "description": "Main clone path: relative to the workspace root, absolute, or ~/…" },
+          "url": { "type": "string", "description": "Remote URL; inosc keeps a bare mirror in .inosc/repos/<name>.git." },
+          "clone": { "type": "string", "description": "A clone you manage instead of url: relative to the workspace root, absolute, or ~/…" },
           "base": { "type": "string" },
           "branch": { "type": "string" },
           "description": { "type": "string", "description": "One line shown to agents." },
-          "include": { "type": "array", "items": { "type": "string" }, "description": "Gitignored files copied from the main clone into each worktree." },
+          "filesMode": { "enum": ["symlink", "copy"], "description": "Overrides the workspace filesMode." },
           "setup": { "type": "array", "items": { "type": "string" }, "description": "Shell commands run in the worktree after creation." },
           "commands": { "type": "object", "additionalProperties": { "type": "string" }, "description": "Named commands listed for agents." },
           "ignoreDirty": { "type": "array", "items": { "type": "string" }, "description": "Paths whose local changes inosc done ignores." }

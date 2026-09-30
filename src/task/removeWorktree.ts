@@ -1,12 +1,12 @@
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import type { Context, Result, TaskRepo, Workspace } from '../types.ts'
-import { expandHome } from '../proc/expandHome.ts'
 import { runGit } from '../proc/runGit.ts'
+import { repoGitDir } from '../repo/repoGitDir.ts'
 import { ok } from '../result/ok.ts'
 
 /**
- * Removes a task worktree and deletes its task branch from the main clone. Callers check
+ * Removes a task worktree and deletes its task branch from the repo (clone or mirror). Callers check
  * for unsaved work first, so git's own dirty check is bypassed (it would also block on
  * `ignoreDirty` paths); `force` additionally removes locked worktrees.
  */
@@ -19,7 +19,7 @@ export const removeWorktree = (
 ): Result<void> => {
   const path = join(dir, repo.name)
   const config = ws.config.repos[repo.name]
-  const clone = config ? expandHome(config.clone, ws.root, ctx.home) : null
+  const clone = config ? repoGitDir(ctx, ws, repo.name, config) : null
   // Resolve the owning repo from the worktree itself so a changed inosc.json can't strand it.
   const common = existsSync(path) ? runGit(path, ['rev-parse', '--path-format=absolute', '--git-common-dir']) : null
   const gitDir = common?.ok ? ['--git-dir', common.value.trim()] : clone ? ['-C', clone] : null

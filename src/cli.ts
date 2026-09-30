@@ -10,8 +10,10 @@ import { addRepos } from './commands/addRepos.ts'
 import { doneTask } from './commands/doneTask.ts'
 import { initWorkspace } from './commands/initWorkspace.ts'
 import { installAgents } from './commands/installAgents.ts'
+import { listRepos } from './commands/listRepos.ts'
 import { listTasks } from './commands/listTasks.ts'
 import { newTask } from './commands/newTask.ts'
+import { syncFiles } from './commands/syncFiles.ts'
 import { loadWorkspace } from './config/loadWorkspace.ts'
 import { err } from './result/err.ts'
 import { ok } from './result/ok.ts'
@@ -64,11 +66,7 @@ const run = (argv: string[]): Result<string> => {
 
   switch (command) {
     case 'repos':
-      return ok(
-        Object.entries(ws.config.repos)
-          .map(([name, r]) => `${name.padEnd(20)} ${r.clone}${r.description ? `  ${r.description}` : ''}`)
-          .join('\n'),
-      )
+      return ok(listRepos(ctx, ws))
     case 'new': {
       const taskId = needId()
       if (!taskId.ok) return taskId
@@ -85,6 +83,11 @@ const run = (argv: string[]): Result<string> => {
       const res = listTasks(ws, id)
       if (!res.ok) return res
       return ok(values.json ? JSON.stringify(res.value, null, 2) : formatTasks(res.value))
+    }
+    case 'sync': {
+      const res = syncFiles(ctx, ws, id)
+      if (!res.ok) return res
+      return ok(res.value.length > 0 ? res.value.join('\n') : 'Nothing to place.')
     }
     case 'path': {
       const taskId = needId()
