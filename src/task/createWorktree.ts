@@ -11,7 +11,8 @@ import { renderBranch } from './renderBranch.ts'
 
 /**
  * Adds a worktree for `name` at `<dir>/<name>`. Edit repos reuse an existing local or
- * remote task branch, else branch from base; read repos are detached at base.
+ * remote task branch, else branch from base; read repos are detached at base. `baseOverride`
+ * (`--base`) replaces the configured base for this task.
  */
 export const createWorktree = (
   ctx: Context,
@@ -21,6 +22,7 @@ export const createWorktree = (
   slug: string | null,
   name: string,
   mode: RepoMode,
+  baseOverride: string | null = null,
 ): Result<TaskRepo> => {
   const repo = ws.config.repos[name]
   if (!repo) return err(`Unknown repo "${name}"`)
@@ -30,7 +32,7 @@ export const createWorktree = (
   const dest = join(dir, name)
   if (existsSync(dest)) return err(`${name}: ${dest} already exists`)
 
-  const base = repo.base ?? ws.config.base
+  const base = baseOverride ?? repo.base ?? ws.config.base
   const remote = baseRemote(base)
   if (remote && runGit(gitDir, ['remote', 'get-url', remote]).ok) {
     const fetched = runGit(gitDir, ['fetch', '--quiet', remote])

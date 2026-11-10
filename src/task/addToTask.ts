@@ -14,7 +14,8 @@ import { writeManifest } from './writeManifest.ts'
 /**
  * Creates worktrees for `requests`, places workspace files, runs setup and the links they
  * complete, and rewrites the agent files. The manifest is saved after every worktree
- * so a failure part-way leaves a task `inosc done` can clean up.
+ * so a failure part-way leaves a task `inosc done` can clean up. `base` overrides every
+ * requested repo's configured base.
  */
 export const addToTask = (
   ctx: Context,
@@ -22,6 +23,7 @@ export const addToTask = (
   dir: string,
   manifest: TaskManifest,
   requests: RepoRequest[],
+  base: string | null = null,
 ): Result<TaskManifest> => {
   let current = manifest
   const save = (m: TaskManifest) => {
@@ -31,7 +33,7 @@ export const addToTask = (
   }
   for (const req of requests) {
     ctx.log.info(`${req.name}: adding ${req.mode === 'edit' ? 'worktree' : 'read-only worktree'}`)
-    const added = createWorktree(ctx, ws, dir, manifest.id, manifest.slug, req.name, req.mode)
+    const added = createWorktree(ctx, ws, dir, manifest.id, manifest.slug, req.name, req.mode, base)
     if (!added.ok) {
       save(current)
       return err(added.error)

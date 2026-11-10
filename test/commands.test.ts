@@ -62,6 +62,22 @@ describe('inosc new', () => {
     expect(git(wt, 'rev-parse', '--abbrev-ref', '@{upstream}')).toBe('origin/t-9')
   })
 
+  it('branches from --base instead of the configured base, and refuses option-like bases', () => {
+    const { ws, ctx, wsRoot, root } = makeWorkspace()
+    const lib = join(root, 'seed', 'lib')
+    git(lib, 'switch', '--quiet', '-c', 'beta')
+    writeFileSync(join(lib, 'beta.txt'), 'beta\n')
+    git(lib, 'add', '-A')
+    git(lib, 'commit', '--quiet', '-m', 'beta')
+    git(lib, 'push', '--quiet', '-u', 'origin', 'beta')
+
+    expect(newTask(ctx, ws, { id: 'T-B', edit: ['lib'], read: [], slug: null, base: '--upload-pack=x' }).ok).toBe(false)
+    expect(newTask(ctx, ws, { id: 'T-B', edit: ['lib'], read: [], slug: null, base: 'origin/beta' }).ok).toBe(true)
+    const wt = join(wsRoot, 'tasks', 'T-B', 'lib')
+    expect(git(wt, 'rev-parse', 'HEAD')).toBe(git(lib, 'rev-parse', 'beta'))
+    expect(JSON.parse(readFileSync(join(wsRoot, 'tasks', 'T-B', '.inosc', 'task.json'), 'utf8')).repos[0].base).toBe('origin/beta')
+  })
+
   it('skips setup and links with skipSetup', () => {
     const { ws, ctx, wsRoot } = makeWorkspace()
     newTask({ ...ctx, skipSetup: true }, ws, { id: 'T-1', edit: ['app', 'lib'], read: [], slug: null })

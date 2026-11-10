@@ -4,6 +4,7 @@ import { homedir } from 'node:os'
 import { resolve } from 'node:path'
 import { parseArgs } from 'node:util'
 import type { Context, Result, Workspace } from './types.ts'
+import { banner } from './cli/banner.ts'
 import { formatTasks } from './cli/formatTasks.ts'
 import { usage } from './cli/usage.ts'
 import { addRepos } from './commands/addRepos.ts'
@@ -32,6 +33,7 @@ const run = (argv: string[]): Result<string> => {
     options: {
       read: { type: 'string', multiple: true, default: [] },
       slug: { type: 'string' },
+      base: { type: 'string' },
       'skip-setup': { type: 'boolean', default: false },
       json: { type: 'boolean', default: false },
       force: { type: 'boolean', default: false },
@@ -42,7 +44,7 @@ const run = (argv: string[]): Result<string> => {
   })
   if (values.version) return ok(version())
   const [command, ...rest] = positionals
-  if (values.help || !command) return ok(usage.trimEnd())
+  if (values.help || !command) return ok(`${banner}\n${usage.trimEnd()}`)
 
   const ctx: Context = {
     cwd: resolve(values.cwd ?? process.cwd()),
@@ -70,13 +72,13 @@ const run = (argv: string[]): Result<string> => {
     case 'new': {
       const taskId = needId()
       if (!taskId.ok) return taskId
-      const res = newTask(ctx, ws, { id: taskId.value, edit: repos, read: values.read, slug: values.slug ?? null })
+      const res = newTask(ctx, ws, { id: taskId.value, edit: repos, read: values.read, slug: values.slug ?? null, base: values.base ?? null })
       return res.ok ? ok(launchHints(res.value.dir)) : res
     }
     case 'add': {
       const taskId = needId()
       if (!taskId.ok) return taskId
-      const res = addRepos(ctx, ws, { id: taskId.value, edit: repos, read: values.read })
+      const res = addRepos(ctx, ws, { id: taskId.value, edit: repos, read: values.read, base: values.base ?? null })
       return res.ok ? ok(`Updated ${res.value.dir}`) : res
     }
     case 'ls': {
